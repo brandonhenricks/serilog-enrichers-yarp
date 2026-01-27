@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Serilog.Enrichers.Yarp/Serilog.Enrichers.Yarp.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Serilog.Enrichers.Yarp.Tests/Serilog.Enrichers.Yarp.Tests.csproj" />
+  </Folder>
+</Solution>
