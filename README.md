@@ -3,17 +3,17 @@
 [![NuGet](https://img.shields.io/nuget/v/Serilog.Enrichers.Yarp.svg)](https://www.nuget.org/packages/Serilog.Enrichers.Yarp)
 [![License](https://img.shields.io/github/license/brandonhenricks/serilog-enrichers-yarp)](LICENSE)
 
-A production-grade Serilog enricher that adds YARP (Yet Another Reverse Proxy) reverse proxy context to log events in ASP.NET Core applications. This library enriches logs with critical proxy information (RouteId, ClusterId, DestinationId) extracted from HttpContext **without taking a hard dependency on YARP packages**.
+A production-grade Serilog enricher that adds YARP (Yet Another Reverse Proxy) reverse proxy context to log events in ASP.NET Core applications. This library enriches logs with critical proxy information (RouteId, ClusterId, DestinationId) extracted from HttpContext using **direct integration with YARP.ReverseProxy package**.
 
 ## Features
 
-- ✅ **Zero YARP Dependencies**: Uses reflection to extract proxy context, works with any YARP version
+- ✅ **Direct YARP Integration**: Uses YARP's public APIs for type-safe context extraction
 - ✅ **Production-Ready**: Follows SOLID, DRY, and KISS principles
 - ✅ **Configurable**: Customize property names and control what gets logged
 - ✅ **DI-Friendly**: Easy integration with ASP.NET Core dependency injection
 - ✅ **Distributed Tracing**: Supports correlation context for distributed systems
 - ✅ **Safe Low-Cardinality**: Enriches with safe, low-cardinality fields suitable for production logging
-- ✅ **netstandard2.0**: Compatible with a wide range of .NET applications
+- ✅ **.NET 6.0+**: Compatible with .NET 6.0 and higher
 - ✅ **Well-Tested**: Comprehensive unit test coverage (39 tests)
 
 ## Installation
@@ -136,16 +136,16 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
 
 ## How It Works
 
-The enricher uses reflection to extract YARP context from `HttpContext` without requiring direct references to YARP packages. This approach:
+The enricher uses YARP's public `IReverseProxyFeature` API to extract proxy context from `HttpContext`. This approach:
 
-1. **Checks HttpContext.Features**: Looks for YARP-related features using pattern matching
-2. **Checks HttpContext.Items**: Falls back to checking the Items dictionary for YARP context
-3. **Safe Failure**: Silently handles cases where YARP is not present or the structure changes
+1. **Uses IReverseProxyFeature**: Accesses YARP's feature from HttpContext.Features
+2. **Type-Safe Extraction**: Uses YARP's RouteModel, ClusterModel, and DestinationState types directly
+3. **Safe Failure**: Silently handles cases where YARP feature is not present
 
 This design ensures:
-- ✅ No hard dependency on YARP packages
-- ✅ Works with any YARP version
-- ✅ Safe for non-YARP applications (no errors if YARP isn't present)
+- ✅ Type-safe integration with YARP
+- ✅ Works with YARP 2.2.0 and later versions
+- ✅ Safe for non-YARP requests (no errors if YARP isn't processing the request)
 - ✅ Zero performance impact when YARP context is not available
 
 ## Log Output Example
@@ -214,9 +214,34 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
 
 ## Requirements
 
-- .NET Standard 2.0 or higher
+- .NET 6.0 or higher
 - Serilog 2.10.0 or higher
-- ASP.NET Core 2.1 or higher (for HttpContext support)
+- ASP.NET Core 6.0 or higher (for HttpContext support)
+- **YARP.ReverseProxy 2.2.0 or higher** (automatically included as a dependency)
+
+## Migration from v1.x to v2.0
+
+Version 2.0 introduces **breaking changes** due to the direct YARP integration:
+
+### What Changed
+- **Target Framework**: Changed from `netstandard2.0` to `net6.0`
+- **YARP Dependency**: Now requires `Yarp.ReverseProxy` package (version 2.2.0+) as a direct dependency
+- **Implementation**: Replaced reflection-based extraction with YARP's public `IReverseProxyFeature` API
+
+### Migration Steps
+1. **Update Target Framework**: Ensure your application targets .NET 6.0 or higher
+2. **Update Package**: Update to version 2.0.0 or higher:
+   ```bash
+   dotnet add package Serilog.Enrichers.Yarp --version 2.0.0
+   ```
+3. **No Code Changes Required**: The public API remains the same; only the internal implementation changed
+4. **Verify YARP Version**: If you're already using YARP, ensure you're on version 2.2.0 or later
+
+### Benefits of Migration
+- Type-safe integration with YARP
+- Better long-term maintainability
+- No reliance on reflection or internal YARP APIs
+- Improved performance through direct API access
 
 ## Contributing
 
