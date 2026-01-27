@@ -33,6 +33,8 @@ namespace Serilog.Enrichers.Yarp
         /// <summary>
         /// Adds the required services for YARP log enrichment to the service collection with custom options.
         /// This registers IHttpContextAccessor if not already registered and configures YarpEnricherOptions.
+        /// Note: If this method is called multiple times, only the first call will register the options
+        /// due to the use of TryAddSingleton. Subsequent calls will be silently ignored.
         /// </summary>
         /// <param name="services">The service collection.</param>
         /// <param name="configureOptions">Action to configure the enricher options.</param>
@@ -55,7 +57,7 @@ namespace Serilog.Enrichers.Yarp
             // Register IHttpContextAccessor if not already registered
             services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
-            // Configure options
+            // Configure options - only first call will be registered
             var options = new YarpEnricherOptions();
             configureOptions(options);
             options.Validate();

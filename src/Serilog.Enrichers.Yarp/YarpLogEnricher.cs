@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Http;
 using Serilog.Core;
 using Serilog.Events;
 using System;
+using System.Collections.Concurrent;
+using System.Linq;
+using System.Reflection;
 
 namespace Serilog.Enrichers.Yarp
 {
@@ -14,10 +17,10 @@ namespace Serilog.Enrichers.Yarp
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly YarpEnricherOptions _options;
-
-        // YARP feature keys used to access proxy context from HttpContext.Features
-        private const string RouteFeatureKey = "Microsoft.ReverseProxy.Forwarder.IReverseProxyFeature";
-        private const string ProxyFeatureKey = "Yarp.ReverseProxy.Forwarder.ForwarderHttpContextFeature";
+        
+        // Cache for PropertyInfo lookups to improve performance
+        private static readonly ConcurrentDictionary<(Type, string), PropertyInfo?> _propertyCache = 
+            new ConcurrentDictionary<(Type, string), PropertyInfo?>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="YarpLogEnricher"/> class.
@@ -101,40 +104,38 @@ namespace Serilog.Enrichers.Yarp
                     return (null, null, null);
                 }
 
-                // Look for YARP feature by iterating through features
-                // YARP typically stores these in IReverseProxyFeature or similar
-                foreach (var featureKvp in features)
-                {
-                    var feature = featureKvp.Value;
-                    if (feature == null) continue;
-
-                    var featureType = feature.GetType();
-                    var featureTypeName = featureType.FullName ?? featureType.Name;
-
-                    // Check if this is a YARP-related feature
-                    if (featureTypeName.Contains("ReverseProxy", StringComparison.OrdinalIgnoreCase) ||
-                        featureTypeName.Contains("Yarp", StringComparison.OrdinalIgnoreCase))
+                // Look for YARP feature by checking features that match YARP patterns
+                var yarpFeatures = features
+                    .Select(kvp => kvp.Value)
+                    .Where(feature => feature != null)
+                    .Where(feature =>
                     {
-                        // Try to extract RouteId
-                        if (routeId == null)
-                        {
-                            routeId = TryGetPropertyValue(feature, "RouteId") ??
-                                     TryGetPropertyValue(feature, "Route")?.ToString();
-                        }
+                        var featureTypeName = feature.GetType().FullName ?? feature.GetType().Name;
+                        return featureTypeName.Contains("ReverseProxy", StringComparison.OrdinalIgnoreCase) ||
+                               featureTypeName.Contains("Yarp", StringComparison.OrdinalIgnoreCase);
+                    });
 
-                        // Try to extract ClusterId
-                        if (clusterId == null)
-                        {
-                            clusterId = TryGetPropertyValue(feature, "ClusterId") ??
-                                       TryGetPropertyValue(feature, "Cluster")?.ToString();
-                        }
+                foreach (var feature in yarpFeatures)
+                {
+                    // Try to extract RouteId
+                    if (routeId == null)
+                    {
+                        routeId = TryGetPropertyValue(feature, "RouteId") ??
+                                 TryGetPropertyValue(feature, "Route")?.ToString();
+                    }
 
-                        // Try to extract DestinationId
-                        if (destinationId == null)
-                        {
-                            destinationId = TryGetPropertyValue(feature, "DestinationId") ??
-                                           TryGetPropertyValue(feature, "Destination")?.ToString();
-                        }
+                    // Try to extract ClusterId
+                    if (clusterId == null)
+                    {
+                        clusterId = TryGetPropertyValue(feature, "ClusterId") ??
+                                   TryGetPropertyValue(feature, "Cluster")?.ToString();
+                    }
+
+                    // Try to extract DestinationId
+                    if (destinationId == null)
+                    {
+                        destinationId = TryGetPropertyValue(feature, "DestinationId") ??
+                                       TryGetPropertyValue(feature, "Destination")?.ToString();
                     }
                 }
 
@@ -149,17 +150,21 @@ namespace Serilog.Enrichers.Yarp
                                      httpContext.Items["Yarp.DestinationId"]?.ToString();
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 // Silently fail if reflection fails - we don't want to crash the application
                 // This is expected if YARP is not present or the structure changes
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine(
+                    $"Failed to extract YARP context from HttpContext: {ex.Message}");
+#endif
             }
 
             return (routeId, clusterId, destinationId);
         }
 
         /// <summary>
-        /// Tries to get a property value from an object using reflection.
+        /// Tries to get a property value from an object using reflection with caching for performance.
         /// </summary>
         /// <param name="obj">The object to get the property from.</param>
         /// <param name="propertyName">The name of the property.</param>
@@ -169,10 +174,16 @@ namespace Serilog.Enrichers.Yarp
             try
             {
                 var type = obj.GetType();
-                var property = type.GetProperty(propertyName, 
-                    System.Reflection.BindingFlags.Public | 
-                    System.Reflection.BindingFlags.Instance | 
-                    System.Reflection.BindingFlags.IgnoreCase);
+                var cacheKey = (type, propertyName);
+                
+                // Use cached PropertyInfo if available
+                var property = _propertyCache.GetOrAdd(cacheKey, key =>
+                {
+                    return key.Item1.GetProperty(key.Item2, 
+                        BindingFlags.Public | 
+                        BindingFlags.Instance | 
+                        BindingFlags.IgnoreCase);
+                });
 
                 if (property != null)
                 {
@@ -180,9 +191,13 @@ namespace Serilog.Enrichers.Yarp
                     return value?.ToString();
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Silently fail - property might not exist or be accessible
+                // Optionally log for diagnostics - can be enabled via conditional compilation
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine(
+                    $"Failed to get property '{propertyName}' from type '{obj.GetType().Name}': {ex.Message}");
+#endif
             }
 
             return null;

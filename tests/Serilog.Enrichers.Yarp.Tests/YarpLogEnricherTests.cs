@@ -10,8 +10,20 @@ using System.Linq;
 
 namespace Serilog.Enrichers.Yarp.Tests
 {
-    public class YarpLogEnricherTests
+    public class YarpLogEnricherTests : IDisposable
     {
+        public YarpLogEnricherTests()
+        {
+            // Clear the singleton InMemorySink before each test to ensure test isolation
+            InMemorySink.Instance.Dispose();
+        }
+
+        public void Dispose()
+        {
+            // Clear the singleton InMemorySink after each test
+            InMemorySink.Instance.Dispose();
+        }
+
         [Fact]
         public void Constructor_WithNullHttpContextAccessor_ShouldThrow()
         {

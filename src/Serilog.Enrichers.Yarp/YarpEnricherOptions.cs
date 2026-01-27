@@ -4,8 +4,10 @@ namespace Serilog.Enrichers.Yarp
 {
     /// <summary>
     /// Configuration options for the YARP log enricher.
+    /// Warning: Options should not be modified after being passed to the enricher or validated,
+    /// as validation is only performed once during enricher construction.
     /// </summary>
-    public class YarpEnricherOptions
+    public sealed class YarpEnricherOptions
     {
         /// <summary>
         /// Gets or sets a value indicating whether to include the RouteId in log events.
@@ -45,7 +47,7 @@ namespace Serilog.Enrichers.Yarp
 
         /// <summary>
         /// Gets or sets a value indicating whether to include correlation context for distributed tracing.
-        /// When enabled, includes additional trace context from YARP features.
+        /// When enabled, includes the ASP.NET Core TraceIdentifier for request correlation.
         /// Default is true.
         /// </summary>
         public bool IncludeCorrelationContext { get; set; } = true;
