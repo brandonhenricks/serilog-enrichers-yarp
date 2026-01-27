@@ -1,18 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageId>Serilog.Enrichers.Yarp</PackageId>
     <Title>Serilog.Enrichers.Yarp</Title>
-    <Version>1.0.0</Version>
+    <Version>2.0.0</Version>
     <Authors>Brandon Henricks</Authors>
     <Company>Brandon Henricks</Company>
     <Product>Serilog.Enrichers.Yarp</Product>
-    <Description>Serilog enricher that adds YARP reverse proxy context (RouteId, ClusterId, DestinationId) to log events from HttpContext without taking a hard dependency on YARP packages.</Description>
+    <Description>Serilog enricher that adds YARP reverse proxy context (RouteId, ClusterId, DestinationId) to log events from HttpContext using direct integration with YARP.ReverseProxy package.</Description>
     <Copyright>Copyright © 2026 Brandon Henricks</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/brandonhenricks/serilog-enrichers-yarp</PackageProjectUrl>
@@ -31,6 +31,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="2.2.0" />
     <PackageReference Include="Serilog" Version="2.10.0" />
+    <PackageReference Include="Yarp.ReverseProxy" Version="2.2.0" PrivateAssets="compile" />
   </ItemGroup>
 
 </Project>
