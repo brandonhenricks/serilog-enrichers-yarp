@@ -172,9 +172,9 @@ namespace Serilog.Enrichers.Yarp.Tests
         }
 
         [Fact]
-        public void Enrich_WithAlternativeYarpKeysInItems_ShouldAddProperties()
+        public void Enrich_WithYarpContextInFeatures_ShouldAddPropertiesWithAlternativeValues()
         {
-            // Arrange - This test now uses the Features approach like the main implementation
+            // Arrange - This test verifies the enricher works with different values
             var mockAccessor = new Mock<IHttpContextAccessor>();
             var httpContext = new DefaultHttpContext();
 
@@ -393,6 +393,9 @@ namespace Serilog.Enrichers.Yarp.Tests
         /// </summary>
         private class TestReverseProxyFeature : IReverseProxyFeature
         {
+            // Shared HttpMessageInvoker to avoid resource leaks in tests
+            private static readonly HttpMessageInvoker SharedHttpClient = new HttpMessageInvoker(new SocketsHttpHandler());
+
             public TestReverseProxyFeature(string? routeId, string? clusterId, string? destinationId)
             {
                 if (routeId != null)
@@ -412,9 +415,8 @@ namespace Serilog.Enrichers.Yarp.Tests
                     {
                         ClusterId = clusterId
                     };
-                    // Use a dummy HttpClient for testing
-                    var httpClient = new HttpMessageInvoker(new SocketsHttpHandler());
-                    Cluster = new ClusterModel(clusterConfig, httpClient);
+                    // Use shared HttpClient for testing to avoid resource leaks
+                    Cluster = new ClusterModel(clusterConfig, SharedHttpClient);
                 }
 
                 if (destinationId != null)
