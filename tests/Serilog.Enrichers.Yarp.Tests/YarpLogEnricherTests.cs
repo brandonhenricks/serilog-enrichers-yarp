@@ -20,8 +20,7 @@ namespace Serilog.Enrichers.Yarp.Tests
 
         public void Dispose()
         {
-            // Clear the singleton InMemorySink after each test
-            InMemorySink.Instance.Dispose();
+            // Clean up resources after test if needed
         }
 
         [Fact]

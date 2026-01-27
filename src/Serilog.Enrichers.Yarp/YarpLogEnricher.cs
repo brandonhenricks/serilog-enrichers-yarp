@@ -110,7 +110,8 @@ namespace Serilog.Enrichers.Yarp
                     .Where(feature => feature != null)
                     .Where(feature =>
                     {
-                        var featureTypeName = feature.GetType().FullName ?? feature.GetType().Name;
+                        var featureType = feature.GetType();
+                        var featureTypeName = featureType.FullName ?? featureType.Name;
                         return featureTypeName.Contains("ReverseProxy", StringComparison.OrdinalIgnoreCase) ||
                                featureTypeName.Contains("Yarp", StringComparison.OrdinalIgnoreCase);
                     });
