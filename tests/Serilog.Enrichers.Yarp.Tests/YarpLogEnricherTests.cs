@@ -57,7 +57,7 @@ namespace Serilog.Enrichers.Yarp.Tests
         {
             // Arrange
             var mockAccessor = new Mock<IHttpContextAccessor>();
-            mockAccessor.Setup(x => x.HttpContext).Returns((HttpContext?)null);
+            mockAccessor.Setup(x => x.HttpContext).Returns((HttpContext?)null!);
 
             var enricher = new YarpLogEnricher(mockAccessor.Object);
 
