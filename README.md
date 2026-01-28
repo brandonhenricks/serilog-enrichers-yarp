@@ -14,7 +14,7 @@ A production-grade Serilog enricher that adds YARP (Yet Another Reverse Proxy) r
 - ✅ **DI-Friendly**: Easy integration with ASP.NET Core dependency injection
 - ✅ **Distributed Tracing**: Supports correlation context for distributed systems
 - ✅ **Safe Low-Cardinality**: Enriches with safe, low-cardinality fields suitable for production logging
-- ✅ **.NET 6.0+**: Compatible with .NET 6.0 and higher
+- ✅ **.NET 6.0+**: Compatible with .NET 6.0, .NET 8.0, and .NET 10.0
 - ✅ **Well-Tested**: Comprehensive unit test coverage (49 tests)
 
 ## Installation
@@ -263,7 +263,7 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
 
 ## Requirements
 
-- .NET 6.0 or higher
+- .NET 6.0, .NET 8.0, or .NET 10.0
 - Serilog 2.10.0 or higher
 - ASP.NET Core 6.0 or higher (for HttpContext support)
 - **YARP.ReverseProxy 2.2.0 or higher** (automatically included as a dependency)
@@ -273,12 +273,12 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
 Version 2.0 introduces **breaking changes** due to the direct YARP integration:
 
 ### What Changed
-- **Target Framework**: Changed from `netstandard2.0` to `net6.0`
+- **Target Framework**: Changed from `netstandard2.0` to `net6.0` (now multi-targeting `net6.0`, `net8.0`, and `net10.0`)
 - **YARP Dependency**: Now requires `Yarp.ReverseProxy` package (version 2.2.0+) as a direct dependency
 - **Implementation**: Replaced reflection-based extraction with YARP's public `IReverseProxyFeature` API
 
 ### Migration Steps
-1. **Update Target Framework**: Ensure your application targets .NET 6.0 or higher
+1. **Update Target Framework**: Ensure your application targets .NET 6.0, .NET 8.0, or .NET 10.0
 2. **Update Package**: Update to version 2.0.0 or higher:
    ```bash
    dotnet add package Serilog.Enrichers.Yarp --version 2.0.0
