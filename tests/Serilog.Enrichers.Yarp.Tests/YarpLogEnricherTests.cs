@@ -7,6 +7,9 @@ using Serilog.Sinks.InMemory;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Yarp.ReverseProxy.Configuration;
+using Yarp.ReverseProxy.Forwarder;
+using Yarp.ReverseProxy.Model;
 
 namespace Serilog.Enrichers.Yarp.Tests
 {
@@ -123,16 +126,21 @@ namespace Serilog.Enrichers.Yarp.Tests
         }
 
         [Fact]
-        public void Enrich_WithYarpContextInItems_ShouldAddProperties()
+        public void Enrich_WithYarpContextInFeatures_ShouldAddProperties()
         {
             // Arrange
             var mockAccessor = new Mock<IHttpContextAccessor>();
             var httpContext = new DefaultHttpContext();
-            httpContext.Items["YarpRouteId"] = "test-route";
-            httpContext.Items["YarpClusterId"] = "test-cluster";
-            httpContext.Items["YarpDestinationId"] = "test-destination";
             httpContext.TraceIdentifier = "trace-123";
 
+            // Create YARP feature
+            var reverseProxyFeature = CreateMockReverseProxyFeature(
+                routeId: "test-route",
+                clusterId: "test-cluster",
+                destinationId: "test-destination"
+            );
+
+            httpContext.Features.Set(reverseProxyFeature);
             mockAccessor.Setup(x => x.HttpContext).Returns(httpContext);
 
             var enricher = new YarpLogEnricher(mockAccessor.Object);
@@ -164,15 +172,20 @@ namespace Serilog.Enrichers.Yarp.Tests
         }
 
         [Fact]
-        public void Enrich_WithAlternativeYarpKeysInItems_ShouldAddProperties()
+        public void Enrich_WithYarpContextInFeatures_ShouldAddPropertiesWithAlternativeValues()
         {
-            // Arrange
+            // Arrange - This test verifies the enricher works with different values
             var mockAccessor = new Mock<IHttpContextAccessor>();
             var httpContext = new DefaultHttpContext();
-            httpContext.Items["Yarp.RouteId"] = "alt-route";
-            httpContext.Items["Yarp.ClusterId"] = "alt-cluster";
-            httpContext.Items["Yarp.DestinationId"] = "alt-destination";
 
+            // Create YARP feature
+            var reverseProxyFeature = CreateMockReverseProxyFeature(
+                routeId: "alt-route",
+                clusterId: "alt-cluster",
+                destinationId: "alt-destination"
+            );
+
+            httpContext.Features.Set(reverseProxyFeature);
             mockAccessor.Setup(x => x.HttpContext).Returns(httpContext);
 
             var enricher = new YarpLogEnricher(mockAccessor.Object);
@@ -206,10 +219,15 @@ namespace Serilog.Enrichers.Yarp.Tests
             // Arrange
             var mockAccessor = new Mock<IHttpContextAccessor>();
             var httpContext = new DefaultHttpContext();
-            httpContext.Items["YarpRouteId"] = "test-route";
-            httpContext.Items["YarpClusterId"] = "test-cluster";
-            httpContext.Items["YarpDestinationId"] = "test-destination";
 
+            // Create YARP feature
+            var reverseProxyFeature = CreateMockReverseProxyFeature(
+                routeId: "test-route",
+                clusterId: "test-cluster",
+                destinationId: "test-destination"
+            );
+
+            httpContext.Features.Set(reverseProxyFeature);
             mockAccessor.Setup(x => x.HttpContext).Returns(httpContext);
 
             var options = new YarpEnricherOptions
@@ -250,11 +268,16 @@ namespace Serilog.Enrichers.Yarp.Tests
             // Arrange
             var mockAccessor = new Mock<IHttpContextAccessor>();
             var httpContext = new DefaultHttpContext();
-            httpContext.Items["YarpRouteId"] = "test-route";
-            httpContext.Items["YarpClusterId"] = "test-cluster";
-            httpContext.Items["YarpDestinationId"] = "test-destination";
             httpContext.TraceIdentifier = "trace-123";
 
+            // Create YARP feature
+            var reverseProxyFeature = CreateMockReverseProxyFeature(
+                routeId: "test-route",
+                clusterId: "test-cluster",
+                destinationId: "test-destination"
+            );
+
+            httpContext.Features.Set(reverseProxyFeature);
             mockAccessor.Setup(x => x.HttpContext).Returns(httpContext);
 
             var options = new YarpEnricherOptions
@@ -323,9 +346,15 @@ namespace Serilog.Enrichers.Yarp.Tests
             // Arrange
             var mockAccessor = new Mock<IHttpContextAccessor>();
             var httpContext = new DefaultHttpContext();
-            httpContext.Items["YarpRouteId"] = "test-route";
-            // ClusterId and DestinationId are not set
 
+            // Create YARP feature with only RouteId
+            var reverseProxyFeature = CreateMockReverseProxyFeature(
+                routeId: "test-route",
+                clusterId: null,
+                destinationId: null
+            );
+
+            httpContext.Features.Set(reverseProxyFeature);
             mockAccessor.Setup(x => x.HttpContext).Returns(httpContext);
 
             var enricher = new YarpLogEnricher(mockAccessor.Object);
@@ -346,6 +375,61 @@ namespace Serilog.Enrichers.Yarp.Tests
             logEvent.Properties.Should().ContainKey("YarpRouteId");
             logEvent.Properties.Should().NotContainKey("YarpClusterId");
             logEvent.Properties.Should().NotContainKey("YarpDestinationId");
+        }
+
+        /// <summary>
+        /// Helper method to create a mock IReverseProxyFeature with specified values
+        /// </summary>
+        private IReverseProxyFeature CreateMockReverseProxyFeature(
+            string? routeId = null, 
+            string? clusterId = null, 
+            string? destinationId = null)
+        {
+            return new TestReverseProxyFeature(routeId, clusterId, destinationId);
+        }
+
+        /// <summary>
+        /// Test implementation of IReverseProxyFeature for testing
+        /// </summary>
+        private class TestReverseProxyFeature : IReverseProxyFeature
+        {
+            // Shared HttpMessageInvoker to avoid resource leaks in tests
+            private static readonly HttpMessageInvoker SharedHttpClient = new HttpMessageInvoker(new SocketsHttpHandler());
+
+            public TestReverseProxyFeature(string? routeId, string? clusterId, string? destinationId)
+            {
+                if (routeId != null)
+                {
+                    var routeConfig = new RouteConfig
+                    {
+                        RouteId = routeId,
+                        Match = new RouteMatch(),
+                        ClusterId = clusterId
+                    };
+                    Route = new RouteModel(routeConfig, null, HttpTransformer.Default);
+                }
+
+                if (clusterId != null)
+                {
+                    var clusterConfig = new ClusterConfig
+                    {
+                        ClusterId = clusterId
+                    };
+                    // Use shared HttpClient for testing to avoid resource leaks
+                    Cluster = new ClusterModel(clusterConfig, SharedHttpClient);
+                }
+
+                if (destinationId != null)
+                {
+                    ProxiedDestination = new DestinationState(destinationId);
+                }
+            }
+
+            public RouteModel? Route { get; }
+            public ClusterModel? Cluster { get; }
+            public IReadOnlyList<DestinationState>? AllDestinations => null;
+            public IReadOnlyList<DestinationState>? AvailableDestinations { get; set; }
+            public DestinationState? ProxiedDestination { get; set; }
         }
     }
 }
