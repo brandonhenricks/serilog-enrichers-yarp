@@ -8,13 +8,14 @@ A production-grade Serilog enricher that adds YARP (Yet Another Reverse Proxy) r
 ## Features
 
 - ✅ **Direct YARP Integration**: Uses YARP's public APIs for type-safe context extraction
+- ✅ **Exception Enrichment**: Automatically enriches exception logs with YARP metadata for better debugging
 - ✅ **Production-Ready**: Follows SOLID, DRY, and KISS principles
 - ✅ **Configurable**: Customize property names and control what gets logged
 - ✅ **DI-Friendly**: Easy integration with ASP.NET Core dependency injection
 - ✅ **Distributed Tracing**: Supports correlation context for distributed systems
 - ✅ **Safe Low-Cardinality**: Enriches with safe, low-cardinality fields suitable for production logging
 - ✅ **.NET 6.0+**: Compatible with .NET 6.0 and higher
-- ✅ **Well-Tested**: Comprehensive unit test coverage (39 tests)
+- ✅ **Well-Tested**: Comprehensive unit test coverage (49 tests)
 
 ## Installation
 
@@ -147,6 +148,54 @@ This design ensures:
 - ✅ Works with YARP 2.2.0 and later versions
 - ✅ Safe for non-YARP requests (no errors if YARP isn't processing the request)
 - ✅ Zero performance impact when YARP context is not available
+
+## Exception Enrichment
+
+The enricher automatically enriches all log events with YARP metadata when the YARP proxy context is available, **including logs for exceptions**. This is particularly valuable for debugging and troubleshooting proxy failures.
+
+### Supported Exception Scenarios
+
+When standard .NET exceptions occur during YARP proxy operations, they are automatically enriched with YARP metadata:
+
+- **HttpRequestException** - Connection failures, timeout errors to backend servers
+- **TaskCanceledException** - Request cancellations due to timeouts or client disconnects
+- **TimeoutException** - Operations that exceed configured timeout limits
+- **InvalidOperationException** - Invalid proxy state or configuration issues
+- **OperationCanceledException** - Canceled proxy operations
+- **AggregateException** - Multiple proxy failures
+
+### Example: Exception with YARP Context
+
+```csharp
+try
+{
+    // YARP proxy operation that fails
+}
+catch (HttpRequestException ex)
+{
+    // This log will be enriched with YARP metadata
+    logger.Error(ex, "Failed to proxy request to backend");
+}
+```
+
+The resulting log event will include both the exception details and YARP context:
+
+```json
+{
+  "Timestamp": "2026-01-27T10:15:30.1234567Z",
+  "Level": "Error",
+  "MessageTemplate": "Failed to proxy request to backend",
+  "Exception": "System.Net.Http.HttpRequestException: Connection timeout...",
+  "Properties": {
+    "YarpRouteId": "api-route",
+    "YarpClusterId": "backend-cluster",
+    "YarpDestinationId": "backend-server-1",
+    "TraceIdentifier": "0HMVFE3QK9K8H:00000001"
+  }
+}
+```
+
+This makes it easy to identify which route, cluster, and destination were involved when an exception occurred.
 
 ## Log Output Example
 
