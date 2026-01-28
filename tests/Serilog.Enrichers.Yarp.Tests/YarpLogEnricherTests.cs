@@ -421,10 +421,6 @@ namespace Serilog.Enrichers.Yarp.Tests
 
                 if (destinationId != null)
                 {
-                    var destinationConfig = new DestinationConfig
-                    {
-                        Address = "http://localhost"
-                    };
                     ProxiedDestination = new DestinationState(destinationId);
                 }
             }
