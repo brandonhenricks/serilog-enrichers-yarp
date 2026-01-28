@@ -296,6 +296,42 @@ Version 2.0 introduces **breaking changes** due to the direct YARP integration:
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+### Building from Source
+
+This project uses [Central Package Management (CPM)](https://learn.microsoft.com/en-us/nuget/consume-packages/central-package-management) for NuGet dependencies. All package versions are managed centrally in `Directory.Packages.props` at the repository root.
+
+#### Prerequisites
+- .NET 6.0 SDK or higher
+- .NET 8.0 SDK (for running tests)
+
+#### Build Commands
+```bash
+# Restore dependencies
+dotnet restore
+
+# Build the solution
+dotnet build --configuration Release
+
+# Run tests
+dotnet test --configuration Release
+```
+
+#### Managing Dependencies
+
+When adding or updating NuGet packages:
+
+1. **Add a new package**: Add the version to `Directory.Packages.props` first:
+   ```xml
+   <PackageVersion Include="PackageName" Version="1.0.0" />
+   ```
+
+2. **Reference in project**: Add the package reference without a version in the `.csproj` file:
+   ```xml
+   <PackageReference Include="PackageName" />
+   ```
+
+3. **Update a package version**: Edit the version only in `Directory.Packages.props` - it will automatically apply to all projects using that package.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
