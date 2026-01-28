@@ -13,15 +13,18 @@ jobs:
     
     strategy:
       matrix:
-        dotnet-version: [ '6.0.x', '8.0.x', '10.0.x' ]
+        target-framework: [ 'net6.0', 'net8.0', 'net10.0' ]
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: Setup .NET ${{ matrix.dotnet-version }}
+    - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: ${{ matrix.dotnet-version }}
+        dotnet-version: |
+          6.0.x
+          8.0.x
+          10.0.x
     
     - name: Restore dependencies
       run: dotnet restore
@@ -29,11 +32,11 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release --no-restore
     
-    - name: Test
-      run: dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+    - name: Test ${{ matrix.target-framework }}
+      run: dotnet test --configuration Release --no-build --framework ${{ matrix.target-framework }} --verbosity normal --collect:"XPlat Code Coverage"
     
     - name: Upload coverage reports
-      if: matrix.dotnet-version == '8.0.x'
+      if: matrix.target-framework == 'net8.0'
       uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
